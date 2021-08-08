@@ -3,7 +3,7 @@ import configparser
 
 # CONFIG
 config = configparser.ConfigParser()
-config.read('dwh.cfg')
+config.read('credentials/dwh.cfg')
 
 # DROP TABLES
 
@@ -20,23 +20,23 @@ time_table_drop = "DROP TABLE IF EXISTS time_table;"
 staging_events_table_create= ("""
 CREATE TABLE IF NOT EXISTS staging_events( 
 
-    artist           VARCHAR(50)  NOT NULL,
+    artist           VARCHAR(50),
     auth             VARCHAR(20)  NOT NULL,
-    first_name       VARCHAR(15)  NOT NULL,
-    gender           VARCHAR(1)   NOT NULL,
+    first_name       VARCHAR(15),
+    gender           VARCHAR(1),
     item_in_session  INTEGER      NOT NULL,
     last_name        VARCHAR(15)  NOT NULL,
-    length           DECIMAL      NOT NULL,
+    length           DECIMAL,
     level            VARCHAR(10)  NOT NULL,
     location         VARCHAR(60)  NOT NULL,
     method           VARCHAR(5)   NOT NULL, 
     page             VARCHAR(10)  NOT NULL,
     registration     BIGINT       NOT NULL,
     session_id       INTEGER      NOT NULL,
-    song             VARCHAR(50)  NOT NULL,
+    song             VARCHAR(50),
     status           INTEGER      NOT NULL,
     ts               BIGINT       NOT NULL,
-    user_agent       VARCHAR(100) NOT NULL,
+    user_agent       VARCHAR(200) NOT NULL,
     user_id          INTEGER      NOT NULL
 );
 """)
@@ -68,7 +68,7 @@ CREATE TABLE IF NOT EXISTS songplay_table(
     artist_id        INTEGER     NOT NULL,
     session_id       INTEGER     NOT NULL DISTKEY,
     location         VARCHAR(60),
-    user_agent       VARCHAR(100)
+    user_agent       VARCHAR(200)
 );
 """)
 
@@ -88,8 +88,8 @@ CREATE TABLE IF NOT EXISTS song_table(
 
     song_id          INTEGER     PRIMARY KEY SORTKEY,
     title            VARCHAR(50) NOT NULL,
-    artist_id        INTEGER     NOT NULL DISTKEY,
-    year             INTEGER     NOT NULL,
+    artist_id        INTEGER,
+    year             INTEGER     NOT NULL DISTKEY,
     duration         DECIMAL     NOT NULL
 );    
 """)
@@ -121,11 +121,20 @@ CREATE TABLE IF NOT EXISTS time_table(
 # STAGING TABLES
 
 staging_events_copy = ("""
-COPY 
-""").format()
+COPY staging_events
+FROM 's3://udacity-dend/log_data'
+IAM_ROLE {}
+REGION 'us-west-2'
+json 's3://udacity-dend/log_json_path.json'
+""").format(config.get('IAM_ROLE','ARN'))
 
 staging_songs_copy = ("""
-""").format()
+COPY staging_songs
+FROM 's3://udacity-dend/song_data' 
+IAM_ROLE {}
+REGION 'us-west-2'
+json 'auto
+""").format(config.get('IAM_ROLE','ARN'))
 
 # FINAL TABLES
 
