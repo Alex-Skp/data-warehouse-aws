@@ -5,12 +5,15 @@ from sql_queries import copy_table_queries, insert_table_queries
 
 def load_staging_tables(cur, conn):
     for query in copy_table_queries:
+        print("Running"+query[:40])
         cur.execute(query)
         conn.commit()
 
 
 def insert_tables(cur, conn):
+    
     for query in insert_table_queries:
+        print("Running"+query[:40])
         cur.execute(query)
         conn.commit()
 
@@ -23,7 +26,7 @@ def main():
     cur = conn.cursor()
     
     load_staging_tables(cur, conn)   
-    #insert_tables(cur, conn)
+    insert_tables(cur, conn)
 
     conn.close()
 

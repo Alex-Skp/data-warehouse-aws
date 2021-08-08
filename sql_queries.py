@@ -20,24 +20,24 @@ time_table_drop = "DROP TABLE IF EXISTS time_table;"
 staging_events_table_create= ("""
 CREATE TABLE IF NOT EXISTS staging_events( 
 
-    artist           VARCHAR(50),
+    artist           VARCHAR(200),
     auth             VARCHAR(20)  NOT NULL,
     first_name       VARCHAR(15),
     gender           VARCHAR(1),
     item_in_session  INTEGER      NOT NULL,
-    last_name        VARCHAR(15)  NOT NULL,
+    last_name        VARCHAR(15),
     length           DECIMAL,
     level            VARCHAR(10)  NOT NULL,
-    location         VARCHAR(60)  NOT NULL,
+    location         VARCHAR(60),
     method           VARCHAR(5)   NOT NULL, 
-    page             VARCHAR(10)  NOT NULL,
-    registration     BIGINT       NOT NULL,
+    page             VARCHAR(50),
+    registration     BIGINT,
     session_id       INTEGER      NOT NULL,
-    song             VARCHAR(50),
+    song             VARCHAR(200),
     status           INTEGER      NOT NULL,
     ts               BIGINT       NOT NULL,
-    user_agent       VARCHAR(200) NOT NULL,
-    user_id          INTEGER      NOT NULL
+    user_agent       VARCHAR(200),
+    user_id          INTEGER 
 );
 """)
 
@@ -48,12 +48,12 @@ CREATE TABLE IF NOT EXISTS staging_songs(
     artist_id        VARCHAR(20) NOT NULL,
     artist_latitude  DECIMAL,
     artist_longitude DECIMAL,
-    artist_location  VARCHAR(50),
-    artist_name      VARCHAR(50) NOT NULL,
+    artist_location  VARCHAR(200),
+    artist_name      VARCHAR(200),
     song_id          VARCHAR(20) NOT NULL,
-    title            VARCHAR(50) NOT NULL,
+    title            VARCHAR(200),
     duration         DECIMAL     NOT NULL,
-    YEAR             INT         NOT NULL
+    year             INTEGER     NOT NULL
 );
 """)
 
@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS songplay_table(
     start_time       TIMESTAMP   NOT NULL,
     user_id          INTEGER     NOT NULL,
     level            VARCHAR(10) NOT NULL,
-    song_id          INTEGER     NOT NULL,
-    artist_id        INTEGER     NOT NULL,
+    song_id          VARCHAR(20) NOT NULL,
+    artist_id        VARCHAR(20) NOT NULL,
     session_id       INTEGER     NOT NULL DISTKEY,
     location         VARCHAR(60),
     user_agent       VARCHAR(200)
@@ -86,9 +86,9 @@ CREATE TABLE IF NOT EXISTS user_table(
 song_table_create = ("""
 CREATE TABLE IF NOT EXISTS song_table(
 
-    song_id          INTEGER     PRIMARY KEY SORTKEY,
-    title            VARCHAR(50) NOT NULL,
-    artist_id        INTEGER,
+    song_id          VARCHAR(20) PRIMARY KEY SORTKEY,
+    title            VARCHAR(200) NOT NULL,
+    artist_id        VARCHAR(20),
     year             INTEGER     NOT NULL DISTKEY,
     duration         DECIMAL     NOT NULL
 );    
@@ -97,10 +97,10 @@ CREATE TABLE IF NOT EXISTS song_table(
 artist_table_create = ("""
 CREATE TABLE IF NOT EXISTS artist_table(
 
-    artist_id        INTEGER     PRIMARY KEY SORTKEY, 
-    name             VARCHAR(50) NOT NULL,
+    artist_id        VARCHAR(20) PRIMARY KEY SORTKEY, 
+    name             VARCHAR(200) NOT NULL,
     location         VARCHAR(50) NOT NULL,
-    lattitude        DECIMAL,
+    latitude        DECIMAL,
     longitude        DECIMAL
 );
 """)
@@ -133,24 +133,94 @@ COPY staging_songs
 FROM 's3://udacity-dend/song_data' 
 IAM_ROLE {}
 REGION 'us-west-2'
-json 'auto
+json 'auto'
 """).format(config.get('IAM_ROLE','ARN'))
 
 # FINAL TABLES
 
 songplay_table_insert = ("""
+INSERT INTO songplay_table(     start_time,
+                                user_id   ,
+                                level     ,
+                                song_id   ,
+                                artist_id ,
+                                session_id,
+                                location  ,
+                                user_agent)
+                                
+SELECT  TIMESTAMP 'epoch'+se.ts*INTERVAL '1 second' AS start_time,
+        se.user_id AS user_id,
+        se.level AS level,
+        ss.song_id          AS song_id,
+        ss.artist_id        AS artist_id,
+        se.session_id       AS session_id,
+        se.location AS location, 
+        se.user_agent AS user_agent
+        
+        
+FROM staging_events       AS se
+LEFT JOIN staging_songs   AS ss ON se.song=ss.title 
+                                AND se.artist=ss.artist_name;
 """)
 
 user_table_insert = ("""
+INSERT INTO user_table( user_id,
+                        first_name,
+                        last_name,
+                        gender,
+                        level)
+SELECT user_id     AS user_id,
+       first_name AS first_name,
+       last_name  AS last_name,
+       gender     AS gender,
+       level      AS level                               
+FROM staging_events;
 """)
 
 song_table_insert = ("""
+INSERT INTO song_table(     song_id,
+                            title,
+                            artist_id,
+                            year,       
+                            duration)
+SELECT  song_id AS song_id,
+        title AS title,
+        artist_id AS artist_id,
+        year AS year,
+        duration AS duration
+FROM staging_songs;
 """)
 
 artist_table_insert = ("""
+INSERT INTO artist_table(   artist_id,
+                            name,
+                            location,
+                            latitude,
+                            longitude)
+SELECT  artist_id AS artist_id,
+        artist_name AS name,
+        artist_location AS location,
+        artist_latitude::DECIMAL AS latitude,
+        artist_longitude::DECIMAL AS longitude
+FROM staging_songs
 """)
 
 time_table_insert = ("""
+INSERT INTO time_table( start_time,
+                        hour,
+                        day,
+                        week,
+                        month,
+                        year,
+                        weekday)
+SELECT  start_time AS start_time,
+        EXTRACT(HOUR FROM start_time) AS hour,
+        EXTRACT(DAY FROM start_time) AS day,
+        EXTRACT(WEEK FROM start_time) AS week, 
+        EXTRACT(MONTH FROM start_time) AS month,
+        EXTRACT(YEAR FROM start_time) AS year,
+        EXTRACT(DOW FROM start_time) AS weekday
+FROM songplay_table
 """)
 
 # QUERY LISTS
