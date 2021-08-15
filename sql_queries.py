@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS staging_events(
     location         VARCHAR(60),
     method           VARCHAR(5)   NOT NULL, 
     page             VARCHAR(50),
-    registration     BIGINT,
+    registration     VARCHAR(12),
     session_id       INTEGER      NOT NULL,
     song             VARCHAR(200),
     status           INTEGER      NOT NULL,
@@ -123,19 +123,26 @@ CREATE TABLE IF NOT EXISTS songplay_table(
 
 staging_events_copy = ("""
 COPY staging_events
-FROM 's3://udacity-dend/log_data'
+FROM {}
 IAM_ROLE {}
-REGION 'us-west-2'
-json 's3://udacity-dend/log_json_path.json'
-""").format(config.get('IAM_ROLE','ARN'))
+REGION {}
+json {}
+""").format(config.get('S3','LOG_DATA'),
+            config.get('IAM_ROLE','ARN'),
+            config.get('S3','REGION'),
+            config.get('S3','LOG_JSONPATH')
+            )
 
 staging_songs_copy = ("""
 COPY staging_songs
-FROM 's3://udacity-dend/song_data' 
+FROM {} 
 IAM_ROLE {}
-REGION 'us-west-2'
+REGION {}
 json 'auto'
-""").format(config.get('IAM_ROLE','ARN'))
+""").format(config.get('S3','SONG_DATA'),
+            config.get('IAM_ROLE','ARN'),
+            config.get('S3','REGION')
+            )
 
 # FINAL TABLES
 
@@ -214,6 +221,8 @@ SELECT  TIMESTAMP 'epoch'+se.ts*INTERVAL '1 second' AS start_time,
 FROM staging_events       AS se
 LEFT JOIN staging_songs   AS ss ON se.song=ss.title 
                                 AND se.artist=ss.artist_name
+                                AND se.length=ss.duration
+                                
 WHERE se.ts IS NOT NULL
 AND se.user_id IS NOT NULL
 AND se.level IS NOT NULL
