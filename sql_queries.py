@@ -76,10 +76,10 @@ user_table_create = ("""
 CREATE TABLE IF NOT EXISTS user_table(
 
     user_id          INTEGER     PRIMARY KEY SORTKEY,
-    first_name       VARCHAR(15) NOT NULL,
-    last_name        VARCHAR(15) NOT NULL,
-    gender           VARCHAR(2)  NOT NULL,
-    level            VARCHAR(10) NOT NULL
+    first_name       VARCHAR(15),
+    last_name        VARCHAR(15),
+    gender           VARCHAR(2),
+    level            VARCHAR(10)
 );    
 """)
 
@@ -87,10 +87,10 @@ song_table_create = ("""
 CREATE TABLE IF NOT EXISTS song_table(
 
     song_id          VARCHAR(20) PRIMARY KEY SORTKEY,
-    title            VARCHAR(200) NOT NULL,
+    title            VARCHAR(200),
     artist_id        VARCHAR(20),
-    year             INTEGER     NOT NULL DISTKEY,
-    duration         DECIMAL     NOT NULL
+    year             INTEGER DISTKEY,
+    duration         DECIMAL
 );    
 """)
 
@@ -98,8 +98,8 @@ artist_table_create = ("""
 CREATE TABLE IF NOT EXISTS artist_table(
 
     artist_id        VARCHAR(20) PRIMARY KEY SORTKEY, 
-    name             VARCHAR(200) NOT NULL,
-    location         VARCHAR(50) NOT NULL,
+    name             VARCHAR(200),
+    location         VARCHAR(50),
     latitude        DECIMAL,
     longitude        DECIMAL
 );
@@ -160,7 +160,14 @@ SELECT  TIMESTAMP 'epoch'+se.ts*INTERVAL '1 second' AS start_time,
         
 FROM staging_events       AS se
 LEFT JOIN staging_songs   AS ss ON se.song=ss.title 
-                                AND se.artist=ss.artist_name;
+                                AND se.artist=ss.artist_name
+WHERE se.ts IS NOT NULL
+AND se.user_id IS NOT NULL
+AND se.level IS NOT NULL
+AND ss.song_id IS NOT NULL
+AND ss.artist_id IS NOT NULL 
+AND session_id IS NOT NULL
+;
 """)
 
 user_table_insert = ("""
@@ -174,7 +181,8 @@ SELECT user_id     AS user_id,
        last_name  AS last_name,
        gender     AS gender,
        level      AS level                               
-FROM staging_events;
+FROM staging_events
+WHERE user_id IS NOT NULL;
 """)
 
 song_table_insert = ("""
@@ -188,7 +196,8 @@ SELECT  song_id AS song_id,
         artist_id AS artist_id,
         year AS year,
         duration AS duration
-FROM staging_songs;
+FROM staging_songs
+WHERE song_id IS NOT NULL;
 """)
 
 artist_table_insert = ("""
@@ -203,6 +212,7 @@ SELECT  artist_id AS artist_id,
         artist_latitude::DECIMAL AS latitude,
         artist_longitude::DECIMAL AS longitude
 FROM staging_songs
+WHERE artist_id IS NOT NULL;
 """)
 
 time_table_insert = ("""
