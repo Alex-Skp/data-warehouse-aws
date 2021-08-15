@@ -8,7 +8,7 @@
 ## Schema:
 For this project we will build a start schema optimized to run queries on song play analysis. The tables are as follow:
 
-![schema.jpeg](attachment:schema.jpeg)
+![schema.jpeg](https://github.com/Alex-Skp/data-warehouse-aws/blob/main/schema.jpeg?raw=true)
 
 ## Methodology:
 
