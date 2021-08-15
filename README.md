@@ -1,9 +1,9 @@
 # Building a data warehouse with Amazon Web Services. 
 
 ## Introduction, Background
-    This project consits in creating a data warehouse with Amazon Web Services. We are in the postion of a data engineer in a music streaming startup called Sparkify, who wants to move their processes and data in the cloud. We can find the original data in S3, a directory of JSON logs on user activity in the app, as well as JSON metadata files of the songs played. 
+This project consits in creating a data warehouse with Amazon Web Services. We are in the postion of a data engineer in a music streaming startup called Sparkify, who wants to move their processes and data in the cloud. We can find the original data in S3, a directory of JSON logs on user activity in the app, as well as JSON metadata files of the songs played. 
 
-    We have to build a ETL pipeline that extracts the data from S3, stages it in Redshift and transforms the data into dimensional tables for analytics teams to gain insights in the data For this we choose a star schema with tables that gathers user, song, artist and timestamps, each in its own table, and then we would create a fact table that represents all the user plays in the application, connecting the other four tables together. 
+We have to build a ETL pipeline that extracts the data from S3, stages it in Redshift and transforms the data into dimensional tables for analytics teams to gain insights in the data For this we choose a star schema with tables that gathers user, song, artist and timestamps, each in its own table, and then we would create a fact table that represents all the user plays in the application, connecting the other four tables together. 
 
 ## Schema:
 For this project we will build a start schema optimized to run queries on song play analysis. The tables are as follow:
