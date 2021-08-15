@@ -78,7 +78,7 @@ CREATE TABLE IF NOT EXISTS user_table(
     user_id          INTEGER     PRIMARY KEY SORTKEY,
     first_name       VARCHAR(15),
     last_name        VARCHAR(15),
-    gender           VARCHAR(2),
+    gender           VARCHAR(1),
     level            VARCHAR(10)
 );    
 """)
@@ -99,8 +99,8 @@ CREATE TABLE IF NOT EXISTS artist_table(
 
     artist_id        VARCHAR(20) PRIMARY KEY SORTKEY, 
     name             VARCHAR(200),
-    location         VARCHAR(50),
-    latitude        DECIMAL,
+    location         VARCHAR(200),
+    latitude         DECIMAL,
     longitude        DECIMAL
 );
 """)
