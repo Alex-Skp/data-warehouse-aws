@@ -31,7 +31,7 @@ CREATE TABLE IF NOT EXISTS staging_events(
     location         VARCHAR(60),
     method           VARCHAR(5)   NOT NULL, 
     page             VARCHAR(50),
-    registration     VARCHAR(12),
+    registration     VARCHAR(13),
     session_id       INTEGER      NOT NULL,
     song             VARCHAR(200),
     status           INTEGER      NOT NULL,
@@ -148,19 +148,27 @@ json 'auto'
 
 
 user_table_insert = ("""
+
+
 INSERT INTO user_table( user_id,
                         first_name,
                         last_name,
                         gender,
                         level)
-SELECT DISTINCT
-        user_id     AS user_id,
+
+WITH 
+unique_users AS(
+    SELECT user_id, first_name, last_name, gender, level, 
+    RANK() OVER(PARTITION BY user_id ORDER BY ts DESC) AS times_logged
+    FROM staging_events WHERE user_id IS NOT NULL
+)
+SELECT  user_id    AS user_id,
         first_name AS first_name,
         last_name  AS last_name,
         gender     AS gender,
         level      AS level                               
-FROM staging_events
-WHERE user_id IS NOT NULL
+FROM unique_users
+WHERE times_logged = 1
 ;
 """)
 
@@ -187,14 +195,19 @@ INSERT INTO artist_table(   artist_id,
                             location,
                             latitude,
                             longitude)
-SELECT  DISTINCT
-        artist_id AS artist_id,
+WITH
+unique_artists AS(
+    SELECT artist_id, artist_name, artist_location, artist_latitude, artist_longitude, 
+    RANK() OVER(PARTITION BY artist_id ORDER BY song_id) AS times_logged
+    FROM staging_songs WHERE artist_id IS NOT NULL
+)
+SELECT  artist_id AS artist_id,
         artist_name AS name,
         artist_location AS location,
         artist_latitude::DECIMAL AS latitude,
         artist_longitude::DECIMAL AS longitude
-FROM staging_songs
-WHERE artist_id IS NOT NULL
+FROM unique_artists
+WHERE times_logged = 1 
 ;
 """)
 
