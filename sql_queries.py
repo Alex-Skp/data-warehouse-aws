@@ -57,21 +57,6 @@ CREATE TABLE IF NOT EXISTS staging_songs(
 );
 """)
 
-songplay_table_create = ("""
-CREATE TABLE IF NOT EXISTS songplay_table(
-
-    songplay_id      INTEGER     IDENTITY(0,1) PRIMARY KEY SORTKEY,
-    start_time       TIMESTAMP   NOT NULL,
-    user_id          INTEGER     NOT NULL,
-    level            VARCHAR(10) NOT NULL,
-    song_id          VARCHAR(20) NOT NULL,
-    artist_id        VARCHAR(20) NOT NULL,
-    session_id       INTEGER     NOT NULL DISTKEY,
-    location         VARCHAR(60),
-    user_agent       VARCHAR(200)
-);
-""")
-
 user_table_create = ("""
 CREATE TABLE IF NOT EXISTS user_table(
 
@@ -118,6 +103,22 @@ CREATE TABLE IF NOT EXISTS time_table(
 );
 """)
 
+songplay_table_create = ("""
+CREATE TABLE IF NOT EXISTS songplay_table(
+
+    songplay_id      INTEGER     IDENTITY(0,1) PRIMARY KEY SORTKEY,
+    start_time       TIMESTAMP   NOT NULL REFERENCES time_table(start_time),
+    user_id          INTEGER     NOT NULL REFERENCES user_table(user_id),
+    level            VARCHAR(10) NOT NULL,
+    song_id          VARCHAR(20) NOT NULL REFERENCES song_table(song_id),
+    artist_id        VARCHAR(20) NOT NULL REFERENCES artist_table(artist_id),
+    session_id       INTEGER     NOT NULL DISTKEY,
+    location         VARCHAR(60),
+    user_agent       VARCHAR(200)
+);
+""")
+
+
 # STAGING TABLES
 
 staging_events_copy = ("""
@@ -137,6 +138,58 @@ json 'auto'
 """).format(config.get('IAM_ROLE','ARN'))
 
 # FINAL TABLES
+
+
+user_table_insert = ("""
+INSERT INTO user_table( user_id,
+                        first_name,
+                        last_name,
+                        gender,
+                        level)
+SELECT DISTINCT
+        user_id     AS user_id,
+        first_name AS first_name,
+        last_name  AS last_name,
+        gender     AS gender,
+        level      AS level                               
+FROM staging_events
+WHERE user_id IS NOT NULL
+;
+""")
+
+song_table_insert = ("""
+INSERT INTO song_table(     song_id,
+                            title,
+                            artist_id,
+                            year,       
+                            duration)
+SELECT  DISTINCT
+        song_id AS song_id,
+        title AS title,
+        artist_id AS artist_id,
+        year AS year,
+        duration AS duration
+FROM staging_songs
+WHERE song_id IS NOT NULL
+;
+""")
+
+artist_table_insert = ("""
+INSERT INTO artist_table(   artist_id,
+                            name,
+                            location,
+                            latitude,
+                            longitude)
+SELECT  DISTINCT
+        artist_id AS artist_id,
+        artist_name AS name,
+        artist_location AS location,
+        artist_latitude::DECIMAL AS latitude,
+        artist_longitude::DECIMAL AS longitude
+FROM staging_songs
+WHERE artist_id IS NOT NULL
+;
+""")
 
 songplay_table_insert = ("""
 INSERT INTO songplay_table(     start_time,
@@ -170,51 +223,6 @@ AND session_id IS NOT NULL
 ;
 """)
 
-user_table_insert = ("""
-INSERT INTO user_table( user_id,
-                        first_name,
-                        last_name,
-                        gender,
-                        level)
-SELECT user_id     AS user_id,
-       first_name AS first_name,
-       last_name  AS last_name,
-       gender     AS gender,
-       level      AS level                               
-FROM staging_events
-WHERE user_id IS NOT NULL;
-""")
-
-song_table_insert = ("""
-INSERT INTO song_table(     song_id,
-                            title,
-                            artist_id,
-                            year,       
-                            duration)
-SELECT  song_id AS song_id,
-        title AS title,
-        artist_id AS artist_id,
-        year AS year,
-        duration AS duration
-FROM staging_songs
-WHERE song_id IS NOT NULL;
-""")
-
-artist_table_insert = ("""
-INSERT INTO artist_table(   artist_id,
-                            name,
-                            location,
-                            latitude,
-                            longitude)
-SELECT  artist_id AS artist_id,
-        artist_name AS name,
-        artist_location AS location,
-        artist_latitude::DECIMAL AS latitude,
-        artist_longitude::DECIMAL AS longitude
-FROM staging_songs
-WHERE artist_id IS NOT NULL;
-""")
-
 time_table_insert = ("""
 INSERT INTO time_table( start_time,
                         hour,
@@ -223,7 +231,8 @@ INSERT INTO time_table( start_time,
                         month,
                         year,
                         weekday)
-SELECT  start_time AS start_time,
+SELECT  DISTINCT 
+        start_time AS start_time,
         EXTRACT(HOUR FROM start_time) AS hour,
         EXTRACT(DAY FROM start_time) AS day,
         EXTRACT(WEEK FROM start_time) AS week, 
@@ -231,14 +240,15 @@ SELECT  start_time AS start_time,
         EXTRACT(YEAR FROM start_time) AS year,
         EXTRACT(DOW FROM start_time) AS weekday
 FROM songplay_table
+;
 """)
 
 # QUERY LISTS
 
-create_table_queries = [staging_events_table_create, staging_songs_table_create, songplay_table_create, user_table_create, song_table_create, artist_table_create, time_table_create]
+create_table_queries = [staging_events_table_create, staging_songs_table_create, user_table_create, song_table_create, artist_table_create, time_table_create, songplay_table_create]
 
 drop_table_queries = [staging_events_table_drop, staging_songs_table_drop, songplay_table_drop, user_table_drop, song_table_drop, artist_table_drop, time_table_drop]
 
 copy_table_queries = [staging_events_copy, staging_songs_copy]
 
-insert_table_queries = [songplay_table_insert, user_table_insert, song_table_insert, artist_table_insert, time_table_insert]
+insert_table_queries = [user_table_insert, song_table_insert, artist_table_insert, songplay_table_insert, time_table_insert]
